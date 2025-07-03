@@ -18,13 +18,16 @@ export async function POST(req: Request) {
   }
 
   // Get the headers
-  const svix_id = req.headers.get('svix-id');
-  const svix_timestamp = req.headers.get('svix-timestamp');
-  const svix_signature = req.headers.get('svix-signature');
-
+  // ...existing code...
+// Get the headers
+const headerPayload = headers();
+const svix_id = headerPayload.get("svix-id");
+const svix_timestamp = headerPayload.get("svix-timestamp");
+const svix_signature = headerPayload.get("svix-signature");
+// ...existing code...
   // If there are no headers, error out
   if (!svix_id || !svix_timestamp || !svix_signature) {
-    return new Response("Error occurred -- no svix headers", {
+    return new Response("Error occured -- no svix headers", {
       status: 400,
     });
   }
@@ -47,7 +50,7 @@ export async function POST(req: Request) {
     }) as WebhookEvent;
   } catch (err) {
     console.error("Error verifying webhook:", err);
-    return new Response("Error occurred", {
+    return new Response("Error occured", {
       status: 400,
     });
   }
@@ -58,43 +61,44 @@ export async function POST(req: Request) {
 
   // CREATE
   if (eventType === "user.created") {
-    try {
-      const { id, email_addresses, image_url, first_name, last_name, username } = evt.data;
-      const user = {
-        clerkId: id,
-        email: email_addresses[0].email_address,
-        username: username ?? "",
-        firstName: first_name ?? "",
-        lastName: last_name ?? "",
-        photo: image_url || "https://www.gravatar.com/avatar?d=mp"
-      };
+    const { id, email_addresses, image_url, first_name, last_name, username } = evt.data;
 
-      const newUser = await createUser(user);
+    const user = {
+  clerkId: id,
+  email: email_addresses?.[0]?.email_address ?? "",
+  username: username ?? "",
+  firstName: first_name ?? "",
+  lastName: last_name ?? "",
+  photo: image_url ?? "",
+};
 
-      if (newUser) {
-        await clerkClient.users.updateUserMetadata(id, {
-          publicMetadata: {
-            userId: newUser._id,
-          },
-        });
-      }
 
-      return NextResponse.json({ message: "OK", user: newUser });
-    } catch (error) {
-      console.error("Error in user.created handler:", error);
-      return NextResponse.json({ message: "Error", error }, { status: 500 });
+    const newUser = await createUser(user);
+
+    // Set public metadata
+    if (newUser) {
+      const client = await clerkClient();
+      await client.users.updateUserMetadata(id, {
+        publicMetadata: {
+          userId: newUser._id,
+        },
+      });
     }
+
+    return NextResponse.json({ message: "OK", user: newUser });
   }
 
   // UPDATE
   if (eventType === "user.updated") {
-    const { id, image_url, first_name, last_name, username } = evt.data;
+    const { id, email_addresses, image_url, first_name, last_name, username } = evt.data;
 
     const user = {
+      clerkId: id,
+      email: email_addresses?.[0]?.email_address ?? "",
       firstName: first_name ?? "",
       lastName: last_name ?? "",
       username: username ?? "",
-      photo: image_url ?? ""
+      photo: image_url ?? "",
     };
 
     const updatedUser = await updateUser(id, user);
