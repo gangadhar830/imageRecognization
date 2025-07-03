@@ -7,7 +7,7 @@ interface mongooseConnection{
 
 let cached:mongooseConnection=(global as any).mongoose;
 if(!cached){
-    cached:(global as any).mongoose={conn:null, promise:null}
+    cached=(global as any).mongoose={conn:null, promise:null}
 }
 export const ConnectToDataBase=async ()=>{
     if(cached.conn){
